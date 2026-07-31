@@ -1,0 +1,14 @@
+{
+  "name": "sleekplan",
+  "version": "1.0.0",
+  "description": "Connect Cursor to your Sleekplan workspace — turn customer feedback into implementation plans, keep your public roadmap in sync with your pull requests, and draft changelog entries from your commits",
+  "author": {
+    "name": "Sleekplan",
+    "email": "support@sleekplan.com",
+    "url": "https://sleekplan.com"
+  },
+  "license": "MIT",
+  "keywords": ["sleekplan", "mcp", "feedback", "roadmap", "changelog", "product-management", "customer-feedback"],
+  "logo": "logo.svg",
+  "primaryColor": "#8cf9ef"
+}

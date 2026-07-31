@@ -1,0 +1,89 @@
+---
+description: How to use the Sleekplan tools correctly — look up workspace keys before writing, how the public roadmap is modelled, and which writes need the user's confirmation. Applies whenever a Sleekplan tool is called.
+alwaysApply: true
+---
+
+# Working with Sleekplan
+
+Everything below applies **only when you are calling Sleekplan tools**. If a task
+doesn't touch Sleekplan, ignore this rule entirely.
+
+Sleekplan holds a team's customer feedback, their public roadmap, and their
+public changelog. Writes are visible to real customers and some cannot be undone.
+
+## Look up keys before you write
+
+Feedback **types** and **statuses** are configured per workspace. They are not a
+fixed vocabulary, and their keys are frequently opaque strings rather than
+readable words. A key that exists in one workspace will not exist in the next.
+
+Before any call that sets a type or status, call `list_feedback_types` /
+`list_feedback_statuses` (or read `sleekplan://feedback-types` /
+`sleekplan://feedback-statuses`) and pick a real `key` from the response. The
+same holds for tags (`list_tags`), segments (`list_segments` — use the `slug`,
+never `segment_id`), and owners (`list_admins`).
+
+Never guess a key, never reuse a key you saw in another workspace, and never
+carry one over from an earlier conversation.
+
+## Two type registries, not one
+
+Feedback types carry `disable_feedback` and `disable_changelog` flags, and in
+most workspaces the two sets barely overlap:
+
+- Creating or updating a **feedback post** → only types where `disable_feedback`
+  is falsy.
+- Creating or updating a **changelog entry** → only types where
+  `disable_changelog` is falsy.
+
+The type that looks obviously right for a release note is often the one that is
+forbidden on changelog entries. Filter the list; don't pattern-match on the name.
+
+## The roadmap is a status, not a separate object
+
+There is no roadmap resource to write to. The public roadmap renders feedback
+posts whose **status** has `roadmap: true`. To put something on the roadmap, move
+the post to such a status with `update_feedback`. To take it off, move it to one
+where `roadmap` is falsy. Read `list_feedback_statuses` to see which is which.
+
+## Reading results
+
+- Empty results surface as an **error** ("0 items found"), not an empty list.
+  Treat that as "nothing matched" and move on — do not retry, and do not report
+  it to the user as a failure.
+- `advanced` on `list_feedback` takes a **stringified** JSON object, not an
+  object.
+- `estimated` on `update_feedback` must be `"{Month}, {YYYY}"` — full English
+  month name, comma, single space, four-digit year (`"March, 2026"`). Anything
+  else is rejected.
+- `effort` is internal team precedence, `0`–`3`, unrelated to how users voted.
+- `create_feedback` ignores owner, effort and estimated. Set those with a
+  follow-up `update_feedback`.
+- Comments you create are stamped as agent-authored, so the team can tell them
+  apart from human replies later.
+
+## Confirm before writing
+
+Match the write to the right gate. When in doubt, use the stricter one.
+
+| Gate | Applies to |
+|---|---|
+| **Just do it** | Every read. Drafting text into the chat or a local file. |
+| **Confirm once, then batch** | Internal-only writes: tags, `effort`, owner, type. Show the full list of intended changes, get one yes, then proceed. |
+| **Confirm each** | Anything a customer sees or that cannot be undone: publishing or updating a changelog entry, `notify`, `announcement`, status moves that change the public roadmap, `merge_feedback`, and any comment. |
+| **Only when asked outright** | `delete_feedback`, `delete_changelog`, `delete_tag`. Never propose a delete as a cleanup step. |
+
+Two defaults that keep the blast radius small:
+
+- Create changelog entries with `draft: true` unless the user explicitly asked to
+  publish. Let them publish from Sleekplan once they've read it.
+- `merge_feedback` is one-way: the source post is closed into the target. Confirm
+  the direction, not just the pair.
+
+## Don't speak for the team
+
+When writing anything customers will read — a comment, a changelog entry, a
+status change — stick to what has actually happened in the repo. Do not promise
+a delivery date, commit to a feature, or apologise on the team's behalf. If the
+user wants a date published, ask them for it rather than inferring one from a
+branch or a milestone.
